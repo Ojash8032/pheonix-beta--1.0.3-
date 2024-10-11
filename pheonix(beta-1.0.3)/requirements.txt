@@ -1,0 +1,11 @@
+pyttsx3
+speechrecognition
+wikipedia-api
+pywhatkit
+requests
+beautifulsoup4
+opencv-python
+numpy
+ultralytics
+mediapipe
+face_recognition
