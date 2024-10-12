@@ -36,22 +36,33 @@ def wishme():
     else:
         speak("Good evening sir")
 
-def takeCommands():
+def takeCommands(retry=False, fallback=False):
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        speak("Please lodge the query.")
+        if retry:
+            speak("I didn't catch that, please repeat.")
+        else:
+            speak("Please state your query.")
         print("Listening...")
         r.pause_threshold = 1
-        audio = r.listen(source, timeout=10, phrase_time_limit=10)
 
-    try:
-        print("Recognizing...")
-        query = r.recognize_google(audio, language='en-in')
-        print(f"Recognized command: {query}")
-        return query.lower()
-    except Exception as e:
-        print("Error: Command not recognized. Please try again.")
-        return None
+        try:
+            audio = r.listen(source, timeout=10, phrase_time_limit=10)
+            print("Recognizing...")
+            query = r.recognize_google(audio, language='en-in')
+            print(f"Recognized command: {query}")
+            return query.lower()
+        except sr.UnknownValueError:
+            if fallback:
+                speak("Voice recognition failed. Please type your request.")
+                query = input("Please type your query: ")
+                return query.lower()
+            else:
+                speak("Sorry, I didn't understand that.")
+                return takeCommands(retry=True, fallback=True)
+        except sr.RequestError:
+            speak("There is an issue with the recognition service. Please try again later.")
+            return None
 
 def sylcommand():
     r = sr.Recognizer()
@@ -96,18 +107,23 @@ def searchYoutube(query):
         speak("Done, Sir")
 
 def latestnews():
+    # Define the news categories and corresponding API URLs
     api_dict = {
-        "business": "https://newsapi.org/v2/top-headlines?country=in&category=business&apiKey=ca34defce88d4f64accd3f1bd2cd8fac",
-        "entertainment": "https://newsapi.org/v2/top-headlines?country=in&category=entertainment&apiKey=ca34defce88d4f64accd3f1bd2cd8fac",
-        "health": "https://newsapi.org/v2/top-headlines?country=in&category=health&apiKey=ca34defce88d4f64accd3f1bd2cd8fac",
-        "science": "https://newsapi.org/v2/top-headlines?country=in&category=science&apiKey=ca34defce88d4f64accd3f1bd2cd8fac",
-        "sports": "https://newsapi.org/v2/top-headlines?country=in&category=sports&apiKey=ca34defce88d4f64accd3f1bd2cd8fac",
-        "technology": "https://newsapi.org/v2/top-headlines?country=in&category=technology&apiKey=ca34defce88d4f64accd3f1bd2cd8fac"
+        "business": "https://newsapi.org/v2/top-headlines?country=in&category=business&apiKey=your_api_key",
+        "entertainment": "https://newsapi.org/v2/top-headlines?country=in&category=entertainment&apiKey=your_api_key",
+        "health": "https://newsapi.org/v2/top-headlines?country=in&category=health&apiKey=your_api_key",
+        "science": "https://newsapi.org/v2/top-headlines?country=in&category=science&apiKey=your_api_key",
+        "sports": "https://newsapi.org/v2/top-headlines?country=in&category=sports&apiKey=your_api_key",
+        "technology": "https://newsapi.org/v2/top-headlines?country=in&category=technology&apiKey=your_api_key"
     }
 
-    speak("Which field news do you want? You can choose from business, entertainment, health, science, sports, or technology.")
-    query = takeCommands()
-    field = query.lower()
+    # Ask the user which category of news they want
+    speak("Which field of news do you want? You can choose from business, entertainment, health, science, sports, or technology.")
+    field = takeCommands()
+
+    while field not in api_dict:
+        speak("Please choose a valid category.")
+        field = takeCommands()
 
     url = api_dict.get(field)
     if url:
@@ -115,22 +131,30 @@ def latestnews():
         articles = news.get("articles")
 
         if articles:
-            speak("Here are the top news articles.")
-            for article in articles:
+            index = 0
+            while index < len(articles):
+                article = articles[index]
                 title = article.get("title")
-                speak(title)
+                speak(f"News {index + 1}: {title}")
                 news_url = article.get("url")
-                speak("For more info, visit:")
-                speak(news_url)
+                speak(f"More info at: {news_url}")
 
+                speak("Would you like to hear the next news, stop, or repeat this one?")
                 silq = sylcommand()
-                if any(word in silq for word in ["stop", "quit", "enough", "no more"]):
+
+                if "stop" in silq:
                     speak("That's all for the news.")
                     break
+                elif "next" in silq:
+                    index += 1
+                elif "repeat" in silq:
+                    continue
+                else:
+                    speak("I didn't understand that.")
         else:
-            speak("Sorry, I couldn't find any news articles.")
+            speak("No news articles found.")
     else:
-        speak("Sorry, I couldn't understand your choice. Please try again.")
+        speak("Invalid category. Please try again.")
 
 c = ["Any tracks on mind?", "What song or track would you like to listen to?", "What shall I play?"]
 h = random.choice(c)
