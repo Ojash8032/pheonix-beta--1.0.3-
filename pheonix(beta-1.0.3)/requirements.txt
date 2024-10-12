@@ -8,4 +8,3 @@ opencv-python
 numpy
 ultralytics
 mediapipe
-face_recognition
