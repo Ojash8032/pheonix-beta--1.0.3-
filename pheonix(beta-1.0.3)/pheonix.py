@@ -1,9 +1,8 @@
 import webbrowser
-import pyttsx3  # type: ignore
+import pyttsx3
 import datetime
 import speech_recognition as sr  # type: ignore
 import os
-import wikipedia  # type: ignore
 import subprocess
 import pywhatkit  # type: ignore
 import random
@@ -15,17 +14,58 @@ from ultralytics import YOLO
 import requests
 import mediapipe as mp
 import json
-import time
+import requests
+import re
+import ai
+from playsound import playsound # type: ignore
+from pydub import AudioSegment# type: ignore
+from pydub.playback import play# type: ignore
+import platform
+import queryref
 
 
-engine = pyttsx3.init('sapi5')
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id)
-engine.setProperty("rate", 175)
+system_os = platform.system()
+
+if system_os == 'Linux':
+    engine = pyttsx3.init('espeak')
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[1].id)
+    engine.setProperty("rate", 175)
+
+elif system_os == 'Windows':
+    engine = pyttsx3.init('sapi5')
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[1].id)
+    engine.setProperty("rate", 175)
+
+else:
+    raise NotImplementedError(f"Unsupported OS: {system_os}")
 
 def speak(audio):
     engine.say(audio)
     engine.runAndWait()
+
+satyamhehe = ["yes, what can i help you with", "at your service, operator", "ummmmmm..., yes?", "Yes, I am listening.", "HI, how can i help u today"]
+
+ojashhehe = random.choice(satyamhehe)
+
+def call(wake_words=["mitra", "buddy", "wake up", "phoenix"]):
+    r = sr.Recognizer()
+    pattern = re.compile("|".join(re.escape(word) for word in wake_words), re.IGNORECASE)
+    while True:
+        with sr.Microphone() as source:
+            print("Waiting for wake word...")
+            r.pause_threshold = 1
+            audio = r.listen(source, timeout=10, phrase_time_limit=5)
+
+        try:
+            query = r.recognize_google(audio, language='en-in').lower()
+            print(f"Recognized: {query}")
+            if pattern.search(query):
+                speak("Wake word detected.")
+                return True
+        except Exception as e:
+            print("Error: Wake word not detected. Listening again...")
 
 def wishme():
     hour = datetime.datetime.now().hour
@@ -37,13 +77,13 @@ def wishme():
         speak("Good evening sir")
 
 
-def takeCommands(say = "please lodge the query"):
+def takeCommands(say="Please lodge the query"):
     r = sr.Recognizer()
     with sr.Microphone() as source:
         speak(say)
         print("Listening...")
         r.pause_threshold = 1
-        audio = r.listen(source, timeout=10, phrase_time_limit=10)
+        audio = r.listen(source, timeout=30, phrase_time_limit=10)
 
     try:
         print("Recognizing...")
@@ -53,7 +93,6 @@ def takeCommands(say = "please lodge the query"):
     except Exception as e:
         print("Error: Command not recognized. Please try again.")
         return None
-
 
 
 def sylcommand():
@@ -83,7 +122,7 @@ def searchGoogle(query):
         query = query.replace("google", "")
         query = query.replace("internet", "")
         query = query.replace("search for", "")
-        query = query.strip() 
+        query = query.strip()
 
         if not query:
             speak("Please provide a valid search term.")
@@ -98,35 +137,45 @@ def searchGoogle(query):
         except Exception as e:
             speak("No speakable output available")
 
+
 def searchYoutube(query):
-    query = query.lower().replace("youtube search", "").replace("search youtube", "").replace("youtube", "").strip()
-    
+    query = query.lower().replace("youtube search", "").replace(
+        "search youtube", "").replace("youtube", "").replace("for","").strip()
+
     if query:
         speak(f"Searching YouTube for {query}")
         print(f"Searching YouTube for: {query}")
-        
+
         try:
             web = f"https://www.youtube.com/results?search_query={query}"
             webbrowser.open(web)
 
-            query = takeCommands("Do you want me to play the top result on youtube?")
-            if query=="yes":
+            query = takeCommands(
+                "Do you want me to play the top result on youtube?")
+            if query == "yes":
                 pywhatkit.playonyt(query)
-            
+
             speak("Playing the top result on YouTube.")
         except Exception as e:
             print(f"Error during YouTube search: {e}")
-            speak("Sorry, I encountered an issue while trying to play the video on YouTube.")
+            speak(
+                "Sorry, I encountered an issue while trying to play the video on YouTube."
+            )
     else:
         speak("Please provide a valid search term for YouTube.")
 
 
-c = ["Any tracks on mind?", "What song or track would you like to listen to?", "What shall I play?"]
+c = [
+    "Any tracks on mind?", "What song or track would you like to listen to?", "What shall I play?"
+]
 h = random.choice(c)
 
+
 def stop(silq):
-    if any(word in silq for word in ["stop", 'quit', 'close', 'thats is', 'sleep']):
+    if any(word in silq
+           for word in ["stop", 'quit', 'close', 'thats is', 'sleep']):
         exit()
+
 
 def set_alarm():
     speak("At what time would you like me to set the alarm?")
@@ -137,6 +186,8 @@ def set_alarm():
 
     if alarm_period.lower() == "pm":
         alarm_hour += 12
+
+
 def open_application(app_name):
     speak(f"Opening {app_name}")
     try:
@@ -151,11 +202,14 @@ def open_application(app_name):
             speak("Sorry, unsupported operating system.")
             print("Unsupported OS")
     except FileNotFoundError:
-        speak(f"Sorry, I couldn't find the application: {app_name}. Please check the name.")
+        speak(
+            f"Sorry, I couldn't find the application: {app_name}. Please check the name."
+        )
         print(f"FileNotFoundError: {app_name} not found.")
     except Exception as e:
         speak(f"Sorry, I couldn't open {app_name}. Please try again.")
         print(f"Error: {e}")
+
 
 def thumbs_up():
     mp_hands = mp.solutions.hands
@@ -163,7 +217,7 @@ def thumbs_up():
     mp_drawing = mp.solutions.drawing_utils
 
     cap = cv2.VideoCapture(0)
-    
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -176,9 +230,13 @@ def thumbs_up():
 
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                mp_drawing.draw_landmarks(frame, hand_landmarks,
+                                          mp_hands.HAND_CONNECTIONS)
 
-                if hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y < hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y:
+                if hand_landmarks.landmark[
+                        mp_hands.HandLandmark.
+                        THUMB_TIP].y < hand_landmarks.landmark[
+                            mp_hands.HandLandmark.INDEX_FINGER_TIP].y:
                     # Detected thumbs up
                     speak("Thumbs up detected.")
                 else:
@@ -193,6 +251,7 @@ def thumbs_up():
     cap.release()
     cv2.destroyAllWindows()
 
+
 def load_gestures():
     try:
         with open('gestures.json', 'r') as f:
@@ -200,21 +259,20 @@ def load_gestures():
     except FileNotFoundError:
         return {}
 
+
 # Add gesture to the JSON file
 def add_gesture(gesture_name, landmarks):
     gestures = load_gestures()
-    
+
     # Convert landmarks to a list of lists for JSON serialization
-    gesture_data = {
-        'name': gesture_name,
-        'landmarks': landmarks
-    }
+    gesture_data = {'name': gesture_name, 'landmarks': landmarks}
 
     gestures[gesture_name] = gesture_data
-    
+
     # Save to JSON file
     with open('gestures.json', 'w') as f:
         json.dump(gestures, f, indent=4)
+
 
 # Hand detection function
 def detect_hand_signs():
@@ -232,24 +290,34 @@ def detect_hand_signs():
 
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                landmarks = [(lm.x, lm.y, lm.z) for lm in hand_landmarks.landmark]
+                landmarks = [(lm.x, lm.y, lm.z)
+                             for lm in hand_landmarks.landmark]
                 gesture_name = recognize_gesture(landmarks)
-                
+
                 # Display detected gesture name
                 if gesture_name:
-                    cv2.putText(frame, gesture_name, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame, gesture_name, (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-                mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                # Ensure gestures are loaded each time
+                gestures = load_gestures()  # Load updated gestures
+
+                if gesture_name:
+                    cv2.putText(frame, gesture_name, (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                mp.solutions.drawing_utils.draw_landmarks(
+                    frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
         cv2.imshow('Hand Gesture Recognition', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-    
+
     cap.release()
     cv2.destroyAllWindows()
 
-# Recognize gesture
+
 def recognize_gesture(landmarks):
     gestures = load_gestures()
     for gesture_name, gesture_data in gestures.items():
@@ -261,7 +329,7 @@ def recognize_gesture(landmarks):
 def add_gesture_from_user():
     gesture_name = takeCommands("Please say the name of the gesture to add:")
     speak(f"Please show the gesture for {gesture_name}.")
-    
+
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands()
     cap = cv2.VideoCapture(0)
@@ -276,12 +344,23 @@ def add_gesture_from_user():
 
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                landmarks = [(lm.x, lm.y, lm.z) for lm in hand_landmarks.landmark]
-                add_gesture(gesture_name, landmarks)  # Add gesture directly to the JSON file
-                speak(f"{gesture_name} added successfully!")
-                cap.release()
-                cv2.destroyAllWindows()
-                return
+                landmarks = [(lm.x, lm.y, lm.z)
+                             for lm in hand_landmarks.landmark]
+                cv2.putText(frame, "Press 's' to save the gesture", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                # Draw landmarks
+                mp.solutions.drawing_utils.draw_landmarks(
+                    frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+                # Check for 's' key press
+                if cv2.waitKey(1) & 0xFF == ord('s'):
+                    add_gesture(gesture_name,
+                                landmarks)  # Add gesture to the JSON file
+                    speak(f"{gesture_name} added successfully!")
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    return
 
         cv2.imshow('Add Gesture', frame)
 
@@ -291,13 +370,14 @@ def add_gesture_from_user():
     cap.release()
     cv2.destroyAllWindows()
 
+
 def object_detection():
     speak("Starting object detection. Please wait.")
-    
+
     model = YOLO('yolov5s.pt')
 
     cap = cv2.VideoCapture(0)
-    
+
     while True:
         ret, img = cap.read()
         if not ret:
@@ -308,255 +388,298 @@ def object_detection():
         for result in results:
             boxes = result.boxes
             for box in boxes:
-                x1, y1, x2, y2 = map(int, box.xyxy[0]) 
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
                 conf = box.conf[0]
                 cls = int(box.cls[0])
-                label = model.names[cls] 
-                color = (0, 255, 0) 
+                label = model.names[cls]
+                color = (0, 255, 0)
                 cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(img, f'{label} {conf:.2f}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                cv2.putText(img, f'{label} {conf:.2f}', (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
         cv2.imshow("YOLO Object Detection", img)
 
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
-    
+
     cap.release()
     cv2.destroyAllWindows()
     speak("Object detection ended.")
 
+
+
 def run():
-    wishme()
-    while True:
-        query = takeCommands()
+    if call():
+        while True:
+            query = takeCommands()
+            refquery = queryref.ref(query)
+            if refquery:
+                if any(word in refquery for word in
+                    ['who are you', 'introduce yourself', 'who is phoenix']):
+                    speak(
+                        "I am a software assistant named Phoenix. I came into existence on the sixteenth of May, 2024, in the computer lab of R S S International School. By far, I have no persona and yet I tend to seek love and fulfill your requests."
+                    )
+                    continue
 
-        if query:
-            if any(word in query for word in ['who are you', 'introduce yourself', 'who is phoenix']):
-                speak("I am a software assistant named Phoenix. I came into existence on the sixteenth of May, 2024, in the computer lab of R S S International School. By far, I have no persona and yet I tend to seek love and fulfill your requests.")
-                continue
+                elif any(word in refquery for word in [
+                        'launch the directory', 'run the directory',
+                        'open the directory'
+                ]):
+                    try:
+                        os.system('cmd /k "dir/s"')
+                    except:
+                        speak("Couldn't execute the directory run")
+                    continue
 
-            elif any(word in query for word in ['launch the directory', 'run the directory', 'open the directory']):
-                try:
-                    os.system('cmd /k "dir/s"')
-                except:
-                    speak("Couldn't execute the directory run")
-                continue
+                elif any(word in refquery for word in
+                        ['launch youtube', 'shoot youtube', 'open youtube']):
+                    webbrowser.open("https://youtube.com")
+                    continue
 
-            elif "wikipedia" in query:
-                speak("Fetching data from Wikipedia...")
-                query = query.replace("wikipedia", '')
-                results = wikipedia.summary(query, sentences=4)
-                speak("According to Wikipedia...")
-                speak(results)
-                print(results)
-                continue
+                elif any(word in refquery for word in [
+                        'launch insta', 'launch instagram', 'shoot insta',
+                        'shoot instagram', 'open insta', 'open instagram'
+                ]):
+                    webbrowser.open("https://instagram.com")
+                    continue
 
-            elif any(word in query for word in ['launch youtube', 'shoot youtube', 'open youtube']):
-                webbrowser.open("https://youtube.com")
-                continue
+                elif any(word in refquery for word in
+                        ['launch github', 'shoot github', 'open github']):
+                    webbrowser.open("https://github.com")
+                    continue
 
-            elif any(word in query for word in ['launch insta', 'launch instagram', 'shoot insta', 'shoot instagram', 'open insta', 'open instagram']):
-                webbrowser.open("https://instagram.com")
-                continue
+                elif any(word in refquery for word in
+                        ['launch chatgpt', 'shoot chatgpt', 'open chatgpt']):
+                    webbrowser.open("https://chatgpt.com")
+                    continue
 
-            elif any(word in query for word in ['launch github', 'shoot github', 'open github']):
-                webbrowser.open("https://github.com")
-                continue
+                elif any(word in refquery for word in
+                        ['launch netflix', 'shoot netflix', 'open netflix']):
+                    webbrowser.open("https://netflix.com")
+                    continue
 
-            elif any(word in query for word in ['launch chatgpt', 'shoot chatgpt', 'open chatgpt']):
-                webbrowser.open("https://chatgpt.com")
-                continue
+                elif any(word in refquery for word in
+                        ['launch leetcode', 'shoot leetcode', 'open leetcode']):
+                    webbrowser.open("https://leetcode.com")
+                    continue
 
-            elif any(word in query for word in ['launch netflix', 'shoot netflix', 'open netflix']):
-                webbrowser.open("https://netflix.com")
-                continue
+                elif any(word in refquery for word in [
+                        "lift the mood", "play me a track", "play music",
+                        "play me a song", "roll the cassette"
+                ]):
+                    speak(h)
+                    refquery = takeCommands()
+                    pywhatkit.playonyt(refquery)
+                    continue
 
-            elif any(word in query for word in ['launch leetcode', 'shoot leetcode', 'open leetcode']):
-                webbrowser.open("https://leetcode.com")
-                continue
+                elif any(word in refquery for word in [
+                        'quit', 'exit', 'stop', 'shut up', 'shut down yourself',
+                        'silence', 'go to sleep'
+                ]):
+                    speak("Eradicating running script and killing the terminal")
+                    exit()
 
-            elif any(word in query for word in ["lift the mood", "play me a track", "play music", "play me a song", "roll the cassette"]):
-                speak(h)
-                query = takeCommands()
-                pywhatkit.playonyt(query)
-                continue
+                elif any(
+                        word in refquery for word in
+                    ["what's the time", "what is the time", "read the clock"]):
+                    strH = int(datetime.datetime.now().strftime("%H"))
+                    strM = int(datetime.datetime.now().strftime("%M"))
+                    speak(f"the time is {strM} past {strH}")
+                    continue
 
-            elif any(word in query for word in ['quit', 'exit', 'stop', 'shut up', 'shut down yourself', 'silence', 'go to sleep']):
-                speak("Eradicating running script and killing the terminal")
-                exit()
-        
-            elif any(word in query for word in ["what's the time", "what is the time", "read the clock"]):
-                strH = int(datetime.datetime.now().strftime("%H"))
-                strM = int(datetime.datetime.now().strftime("%M"))
-                speak(f"the time is {strM} past {strH}")
-                continue
+                elif any(word in refquery
+                        for word in ['set an alarm', 'wake me up', 'ring at']):
+                    set_alarm()
+                    continue
 
-            elif any(word in query for word in ['set an alarm', 'wake me up', 'ring at']):
-                set_alarm()
-                continue
+                elif any(
+                        word in refquery for word in
+                    ["search google", "browse google", (
+                        "search" and "on google")]):
+                    searchGoogle(refquery)
+                    continue
 
-            elif any(word in query for word in ["search google", "browse google", ("search" and "on google")]):
-                searchGoogle(query)
-                continue
+                elif any(word in refquery for word in [
+                        "search youtube", "browse youtube",
+                    ("search" and "on youtube")
+                ]):
+                    searchYoutube(refquery)
+                    continue
 
-            elif any(word in query for word in ["search youtube", "browse youtube", ("search" and "on youtube")]):
-                searchYoutube(query)
-                continue
-
-            elif "shutdown the system" in query:
-                query = takeCommands("Are You sure you want to shutdown")
-                if "yes" in query:
-                    os.system("shutdown /s /t 1")
-                elif "no" in query:
-                    break
-
-            elif "temperature" in query:
-                search = "temperature in noida"
-                url = f"https://www.google.com/search?q={search}"
-                r = requests.get(url)
-                data = BeautifulSoup(r.text, "html.parser")
-                temp = data.find("div", class_="BNeawe").text
-                speak(f"current {search} is {temp}")
-
-
-            elif "wheather" in query:
-                baseurl = "https://api.openweathermap.org/data/2.5/weather?"
-                apikey = "a8acd508d3a8d2dbebce62b167ddccb7"
-                city = "Noida"
-
-                url = f"{baseurl}appid={apikey}&q={city}"
-
-                response = requests.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-
-                    def kelvin(kelvin_temp):
-                        celsius = kelvin_temp - 273.15
-                        fahrenheit = celsius * (9 / 5) + 32
-                        return celsius, fahrenheit
-                    
-                    tempk = data['main']['temp']
-                    tempc, tempf = kelvin(tempk)
-
-                    feelslikek = data['main']['feels_like']
-                    feelslikec, feelslikef = kelvin(feelslikek)
-                    windspeed = data['wind']['speed']
-                    humidity = data['main']['humidity']
-                    description = data['weather'][0]['description']
-                    sunrise = datetime.datetime.utcfromtimestamp(data['sys']['sunrise'] + data['timezone'])
-                    sunset = datetime.datetime.utcfromtimestamp(data['sys']['sunset'] + data['timezone'])
-
-                    speak(f"In NOIDA, the temperature is {tempc:.2f} degrees Celsius and feels like {feelslikec:.2f} degrees Celsius. Humidity is {humidity}% and wind speed is {windspeed} km/h. Today's weather is {description}, with sunrise at {sunrise} and sunset at {sunset}.")
-                else:
-                    print(f"Error fetching weather data: {response.status_code}")
-
-            elif "object detection" in query:
-                object_detection()
-
-            elif "open" in query:
-                query = query.replace("pheonix","")
-                query = query.replace("open","")
-                open_application(query)
-
-            elif "doodles" in query:
-                ix, iy, k = 200, 200, -1
-                def mouse(event, x, y, flags, param):
-                    global ix, iy, k
-                    if event == cv2.EVENT_LBUTTONDOWN:
-                        ix, iy = x, y
-                        k = 1
-                        
-
-                cv2.namedWindow("draw")
-                cv2.setMouseCallback("draw", mouse)
-
-                cap = cv2.VideoCapture(0)
-
-
-                while True:
-                    _, frm = cap.read()
-
-                    frm = cv2.flip(frm, 1)
-
-                    cv2.imshow("draw", frm)
-
-                    if cv2.waitKey(1) == 27 or k == 1:
-                        old_gray = cv2.cvtColor(frm, cv2.COLOR_BGR2GRAY)
-                        mask = np.zeros_like(frm)
+                elif "shutdown the system" in refquery:
+                    query = takeCommands("Are You sure you want to shutdown")
+                    if "yes" in refquery:
+                        os.system("shutdown /s /t 1")
+                    elif "no" in refquery:
                         break
 
-                cv2.destroyAllWindows()
+                elif "temperature" in refquery:
+                    search = "temperature in noida"
+                    url = f"https://www.google.com/search?q={search}"
+                    r = requests.get(url)
+                    data = BeautifulSoup(r.text, "html.parser")
+                    temp = data.find("div", class_="BNeawe").text
+                    speak(f"current {search} is {temp}")
 
-                old_pts = np.array([[ix, iy]], dtype=np.float32).reshape(-1,1,2)
+                elif "wheather" in refquery:
+                    baseurl = "https://api.openweathermap.org/data/2.5/weather?"
+                    apikey = "a8acd508d3a8d2dbebce62b167ddccb7"
+                    city = "Noida"
 
-                color = (0,255,0)
-                c=0
-                while True:
+                    url = f"{baseurl}appid={apikey}&q={city}"
 
-                    _, new_frm = cap.read()
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
 
-                    new_frm = cv2.flip(new_frm, 1)
+                        def kelvin(kelvin_temp):
+                            celsius = kelvin_temp - 273.15
+                            fahrenheit = celsius * (9 / 5) + 32
+                            return celsius, fahrenheit
 
-                    new_gray = cv2.cvtColor(new_frm ,cv2.COLOR_BGR2GRAY)
+                        tempk = data['main']['temp']
+                        tempc, tempf = kelvin(tempk)
 
-                    new_pts,status,err = cv2.calcOpticalFlowPyrLK(old_gray, 
-                                        new_gray, 
-                                        old_pts, 
-                                        None, maxLevel=1,
-                                        criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
-                                                                        15, 0.08))
+                        feelslikek = data['main']['feels_like']
+                        feelslikec, feelslikef = kelvin(feelslikek)
+                        windspeed = data['wind']['speed']
+                        humidity = data['main']['humidity']
+                        description = data['weather'][0]['description']
+                        sunrise = datetime.datetime.utcfromtimestamp(
+                            data['sys']['sunrise'] + data['timezone'])
+                        sunset = datetime.datetime.utcfromtimestamp(
+                            data['sys']['sunset'] + data['timezone'])
 
-                    key = cv2.waitKey(1)
-
-                    if key == ord('e'):
-                        mask = np.zeros_like(new_frm)
-
-                    elif key == ord('c'):
-                        color = (0,0,0)
-                        lst = list(color)
-                        c+=1
-                        lst[c%3] = 255
-                        color = tuple(lst)
-
-                    elif key == ord('g'):
-                        pass
+                        speak(
+                            f"In NOIDA, the temperature is {tempc:.2f} degrees Celsius and feels like {feelslikec:.2f} degrees Celsius. Humidity is {humidity}% and wind speed is {windspeed} km/h. Today's weather is {description}, with sunrise at {sunrise} and sunset at {sunset}."
+                        )
                     else:
-                        for i, j in zip(old_pts, new_pts):
-                            x,y = j.ravel()
-                            a, b = i.ravel()
+                        print(
+                            f"Error fetching weather data: {response.status_code}")
 
-                            cv2.line(mask, (int(a),int(b)), (int(x), int(y)), color, 15)
+                elif "object detection" in refquery:
+                    object_detection()
 
-                    cv2.circle(new_frm, (int(x),int(y)), 3, (255,255,0), 2)
+                elif "open" in refquery:
+                    refquery = refquery.replace("please", "")
+                    refquery = refquery.replace("phoenix", "")
+                    refquery = refquery.replace("for me", "")
+                    refquery = refquery.replace("would you", "")
+                    refquery = refquery.replace("pheonix", "")
+                    refquery = refquery.replace("open", "")
+                    open_application(query) 
 
+                elif "doodles" in refquery:
+                    ix, iy, k = 200, 200, -1
 
+                    def mouse(event, x, y, flags, param):
+                        global ix, iy, k
+                        if event == cv2.EVENT_LBUTTONDOWN:
+                            ix, iy = x, y
+                            k = 1
+
+                    cv2.namedWindow("draw")
+                    cv2.setMouseCallback("draw", mouse)
+
+                    cap = cv2.VideoCapture(0)
+
+                    while True:
+                        _, frm = cap.read()
+
+                        frm = cv2.flip(frm, 1)
+
+                        cv2.imshow("draw", frm)
+
+                        if cv2.waitKey(1) == 27 or k == 1:
+                            old_gray = cv2.cvtColor(frm, cv2.COLOR_BGR2GRAY)
+                            mask = np.zeros_like(frm)
+                            break
+
+                    cv2.destroyAllWindows()
+
+                    old_pts = np.array([[ix, iy]],
+                                    dtype=np.float32).reshape(-1, 1, 2)
+
+                    color = (0, 255, 0)
+                    c = 0
+                    while True:
+
+                        _, new_frm = cap.read()
+
+                        new_frm = cv2.flip(new_frm, 1)
+
+                        new_gray = cv2.cvtColor(new_frm, cv2.COLOR_BGR2GRAY)
+
+                        new_pts, status, err = cv2.calcOpticalFlowPyrLK(
+                            old_gray,
+                            new_gray,
+                            old_pts,
+                            None,
+                            maxLevel=1,
+                            criteria=(cv2.TERM_CRITERIA_EPS
+                                    | cv2.TERM_CRITERIA_COUNT, 15, 0.08))
+
+                        key = cv2.waitKey(1)
+
+                        if key == ord('e'):
+                            mask = np.zeros_like(new_frm)
+
+                        elif key == ord('c'):
+                            color = (0, 0, 0)
+                            lst = list(color)
+                            c += 1
+                            lst[c % 3] = 255
+                            color = tuple(lst)
+
+                        elif key == ord('g'):
+                            pass
+                        else:
+                            for i, j in zip(old_pts, new_pts):
+                                x, y = j.ravel()
+                                a, b = i.ravel()
+
+                                cv2.line(mask, (int(a), int(b)), (int(x), int(y)),
+                                        color, 15)
+
+                        cv2.circle(new_frm, (int(x), int(y)), 3, (255, 255, 0), 2)
+
+                        new_frm = cv2.addWeighted(new_frm, 0.8, mask, 0.2, 0.1)
+
+                        cv2.imshow("", new_frm)
+                        cv2.imshow("drawing", mask)
+
+                        old_gray = new_gray.copy()
+
+                        old_pts = new_pts.reshape(-1, 1, 2)
+
+                        if key == ord("q"):
+                            break
+
+                    cv2.destroyAllWindows()
+                    cap.release()
+
+                elif any(word in refquery for word in ["thumbs up"]):
+                    thumbs_up()
+
+                elif any(word in refquery for word in
+                        ["add handsign", "add gesture", "add hand sign"]):
+                    add_gesture_from_user()
+
+                elif any(word in refquery for word in [
+                        "detect handsign", "detect gesture", "detect hand sign",
+                        "hand detection", "hand recognition"
+                ]):
+                    detect_hand_signs()
+                
+                else:
+                    try:
+                        import ai
+                        hello=ai.ai(query)
+                        print(hello)
+                        speak(hello)
                     
-                    new_frm = cv2.addWeighted(new_frm ,0.8, mask, 0.2, 0.1)
-
-                    cv2.imshow("", new_frm)
-                    cv2.imshow("drawing", mask)
-
-                    old_gray = new_gray.copy()
-
-                    old_pts = new_pts.reshape(-1,1,2) 
-
-                    if key == ord("q"):
-                        break
-
-                cv2.destroyAllWindows()
-                cap.release()    
-
-            elif any(word in query for word in ["thumbs up"]):
-               thumbs_up()
-
-            elif any(word in query for word in ["add handsign", "add gesture", "add hand sign"]):
-                add_gesture_from_user()
-
-            elif any(word in query for word in ["detect handsign", "detect gesture", "detect hand sign"]):
-                detect_hand_signs()
-
-            else:
-                speak("didn't get that, please try again")
+                    except Exception as e:
+                        speak("didn't get that, please try again")
 
 run()
